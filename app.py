@@ -47,7 +47,7 @@ conn = get_connection()
 
 
 # ============================================================
-# LOAD DATA
+# DATA QUERIES
 # ============================================================
 
 @st.cache_data
@@ -73,10 +73,7 @@ def load_metrics():
         ORDER BY climatewell_score DESC;
     """
 
-    return pd.read_sql(
-        query,
-        conn
-    )
+    return pd.read_sql(query, conn)
 
 
 @st.cache_data
@@ -113,10 +110,7 @@ def load_neighborhood_map():
         ORDER BY n.name;
     """
 
-    return pd.read_sql(
-        query,
-        conn
-    )
+    return pd.read_sql(query, conn)
 
 
 @st.cache_data
@@ -125,6 +119,7 @@ def load_parks():
     query = """
         SELECT
             p.id,
+
             COALESCE(
                 p.name,
                 'Unnamed Park'
@@ -146,10 +141,7 @@ def load_parks():
         );
     """
 
-    return pd.read_sql(
-        query,
-        conn
-    )
+    return pd.read_sql(query, conn)
 
 
 def refresh_metrics():
@@ -170,7 +162,7 @@ def refresh_metrics():
 
 
 # ============================================================
-# GEOMETRY HELPERS
+# HELPERS
 # ============================================================
 
 def geometry_to_coordinates(geometry_text):
@@ -178,13 +170,9 @@ def geometry_to_coordinates(geometry_text):
     if not geometry_text:
         return []
 
-    geometry = json.loads(
-        geometry_text
-    )
+    geometry = json.loads(geometry_text)
 
-    geometry_type = geometry.get(
-        "type"
-    )
+    geometry_type = geometry.get("type")
 
     coordinates = geometry.get(
         "coordinates",
@@ -192,12 +180,10 @@ def geometry_to_coordinates(geometry_text):
     )
 
     if geometry_type == "Polygon":
-
         if coordinates:
             return coordinates[0]
 
     if geometry_type == "MultiPolygon":
-
         if coordinates and coordinates[0]:
             return coordinates[0][0]
 
@@ -213,9 +199,9 @@ def score_to_color(score):
         min(score, 100)
     )
 
-    # 0 = green
-    # 50 = yellow
-    # 100 = red
+    # 0   -> green
+    # 50  -> yellow
+    # 100 -> red
 
     if score <= 50:
 
@@ -248,7 +234,7 @@ def score_to_color(score):
 
 
 # ============================================================
-# PREPARE DATA
+# LOAD DATA
 # ============================================================
 
 metrics_df = load_metrics()
@@ -311,17 +297,13 @@ map_df["park_access_300m_percent"] = (
 
 
 map_df["hot_days_35c"] = (
-    map_df[
-        "hot_days_35c"
-    ]
+    map_df["hot_days_35c"]
     .astype(int)
 )
 
 
 map_df["population"] = (
-    map_df[
-        "population"
-    ]
+    map_df["population"]
     .astype(int)
 )
 
@@ -330,39 +312,32 @@ map_df["population"] = (
 # SIDEBAR
 # ============================================================
 
-st.sidebar.title(
-    "🌱 ClimateWell"
+st.sidebar.markdown(
+    "## ClimateWell"
 )
-
 
 st.sidebar.caption(
-    "Urban Climate & Well-being Analytics"
+    "Çankaya pilot"
 )
 
 
-selected_neighborhood = (
-    st.sidebar.selectbox(
-        "Select neighborhood",
-        metrics_df[
-            "neighborhood"
-        ].tolist()
-    )
+selected_neighborhood = st.sidebar.selectbox(
+    "Neighborhood",
+    metrics_df[
+        "neighborhood"
+    ].tolist()
 )
 
 
-show_parks = (
-    st.sidebar.checkbox(
-        "Show mapped parks",
-        value=True
-    )
+show_parks = st.sidebar.checkbox(
+    "Show parks",
+    value=True
 )
 
 
-focus_selected = (
-    st.sidebar.checkbox(
-        "Focus map on selected neighborhood",
-        value=False
-    )
+focus_selected = st.sidebar.checkbox(
+    "Focus selected neighborhood",
+    value=False
 )
 
 
@@ -370,7 +345,7 @@ st.sidebar.divider()
 
 
 if st.sidebar.button(
-    "🔄 Refresh calculated metrics"
+    "Refresh metrics"
 ):
 
     try:
@@ -378,7 +353,7 @@ if st.sidebar.button(
         refresh_metrics()
 
         st.sidebar.success(
-            "Metrics refreshed successfully."
+            "Metrics refreshed."
         )
 
         st.rerun()
@@ -415,30 +390,37 @@ selected_map_df = (
 
 
 # ============================================================
-# HEADER
+# CLEAN HEADER
 # ============================================================
 
-st.title(
-    "🌱 ClimateWell"
-)
+st.markdown(
+    """
+    <div style="
+        padding-top: 6px;
+        padding-bottom: 24px;
+    ">
+        <div style="
+            font-size: 42px;
+            font-weight: 700;
+            letter-spacing: -1.2px;
+            margin-bottom: 6px;
+        ">
+            ClimateWell
+        </div>
 
-
-st.subheader(
-    "Urban Climate & Well-being Analytics"
-)
-
-
-st.caption(
-    "A PostgreSQL/PostGIS-based prototype combining "
-    "park accessibility, population density and "
-    "summer heat exposure."
-)
-
-
-st.info(
-    "ClimateWell is a comparative exploratory prototype. "
-    "It is not an official health, climate-risk or "
-    "municipal assessment system."
+        <div style="
+            font-size: 17px;
+            color: #9ca3af;
+            max-width: 760px;
+            line-height: 1.5;
+        ">
+            Neighborhood-level analysis of park access,
+            population density and summer heat exposure
+            across Çankaya, Ankara.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
 )
 
 
@@ -446,25 +428,22 @@ st.info(
 # TABS
 # ============================================================
 
-tab_overview, tab_explorer, tab_data = st.tabs(
+tab_overview, tab_neighborhoods, tab_methodology = st.tabs(
     [
-        "🗺️ Overview",
-        "🔎 Neighborhood Explorer",
-        "📊 Data & Methodology"
+        "Overview",
+        "Neighborhoods",
+        "Methodology"
     ]
 )
 
 
 # ============================================================
-# TAB 1 — OVERVIEW
+# OVERVIEW
 # ============================================================
 
 with tab_overview:
 
-    highest_priority = (
-        metrics_df.iloc[0]
-    )
-
+    highest_priority = metrics_df.iloc[0]
 
     average_score = float(
         metrics_df[
@@ -472,13 +451,11 @@ with tab_overview:
         ].mean()
     )
 
-
     average_park_access = float(
         metrics_df[
             "park_access_300m_percent"
         ].mean()
     )
-
 
     total_population = int(
         metrics_df[
@@ -487,15 +464,12 @@ with tab_overview:
     )
 
 
-    col1, col2, col3, col4 = (
-        st.columns(4)
-    )
+    col1, col2, col3, col4 = st.columns(4)
 
 
     with col1:
-
         st.metric(
-            "Highest Priority",
+            "Highest priority",
             highest_priority[
                 "neighborhood"
             ]
@@ -503,25 +477,22 @@ with tab_overview:
 
 
     with col2:
-
         st.metric(
-            "Average Score",
+            "Average score",
             f"{average_score:.1f}"
         )
 
 
     with col3:
-
         st.metric(
-            "Average Park Access",
+            "Average park access",
             f"{average_park_access:.1f}%"
         )
 
 
     with col4:
-
         st.metric(
-            "Pilot Population",
+            "Population covered",
             f"{total_population:,}"
         )
 
@@ -529,24 +500,21 @@ with tab_overview:
     st.divider()
 
 
-    st.header(
-        "ClimateWell Priority Map"
+    # --------------------------------------------------------
+    # MAP
+    # --------------------------------------------------------
+
+    st.subheader(
+        "Neighborhood priority"
     )
 
-
     st.caption(
-        "Green represents lower comparative priority, "
-        "yellow represents intermediate values, "
-        "and red represents higher comparative priority."
+        "Lower scores are shown in green and higher scores in red."
     )
 
 
     layers = []
 
-
-    # --------------------------------------------------------
-    # NEIGHBORHOOD LAYER
-    # --------------------------------------------------------
 
     neighborhood_layer = pdk.Layer(
 
@@ -587,10 +555,6 @@ with tab_overview:
     )
 
 
-    # --------------------------------------------------------
-    # PARK LAYER
-    # --------------------------------------------------------
-
     if show_parks:
 
         park_layer = pdk.Layer(
@@ -605,7 +569,7 @@ with tab_overview:
                 20,
                 170,
                 70,
-                155
+                150
             ],
 
             get_line_color=[
@@ -627,10 +591,6 @@ with tab_overview:
             park_layer
         )
 
-
-    # --------------------------------------------------------
-    # SELECTED NEIGHBORHOOD OUTLINE
-    # --------------------------------------------------------
 
     selected_layer = pdk.Layer(
 
@@ -665,7 +625,7 @@ with tab_overview:
 
 
     # --------------------------------------------------------
-    # MAP POSITION
+    # MAP VIEW
     # --------------------------------------------------------
 
     if (
@@ -695,22 +655,13 @@ with tab_overview:
 
 
     view_state = pdk.ViewState(
-
         latitude=map_latitude,
-
         longitude=map_longitude,
-
         zoom=map_zoom,
-
         pitch=0,
-
         bearing=0
     )
 
-
-    # --------------------------------------------------------
-    # TOOLTIP
-    # --------------------------------------------------------
 
     tooltip = {
 
@@ -725,27 +676,18 @@ with tab_overview:
             "backgroundColor": "#111827",
             "color": "#FFFFFF",
             "fontSize": "12px",
-            "padding": "6px",
-            "borderRadius": "4px"
+            "padding": "6px"
         }
     }
 
 
     deck = pdk.Deck(
-
         layers=layers,
-
         initial_view_state=view_state,
-
         tooltip=tooltip,
-
         map_style="dark"
     )
 
-
-    # --------------------------------------------------------
-    # PYDECK HTML RENDER
-    # --------------------------------------------------------
 
     deck_html = deck.to_html(
         as_string=True
@@ -759,19 +701,9 @@ with tab_overview:
     )
 
 
-    # --------------------------------------------------------
-    # LEGEND
-    # --------------------------------------------------------
-
-    st.markdown(
-        """
-**Priority scale:**  
-🟢 Lower priority &nbsp;&nbsp;&nbsp;
-🟡 Intermediate &nbsp;&nbsp;&nbsp;
-🔴 Higher priority
-
-🌳 Green polygons represent mapped OpenStreetMap parks.
-"""
+    st.caption(
+        "🟢 Lower priority   ·   🟡 Intermediate   ·   "
+        "🔴 Higher priority   ·   🌳 Parks"
     )
 
 
@@ -782,8 +714,8 @@ with tab_overview:
     # RANKING
     # --------------------------------------------------------
 
-    st.header(
-        "ClimateWell Score Ranking"
+    st.subheader(
+        "Score ranking"
     )
 
 
@@ -806,23 +738,20 @@ with tab_overview:
 
 
 # ============================================================
-# TAB 2 — NEIGHBORHOOD EXPLORER
+# NEIGHBORHOODS
 # ============================================================
 
-with tab_explorer:
+with tab_neighborhoods:
 
-    st.header(
+    st.subheader(
         selected_neighborhood
     )
 
 
-    col1, col2, col3, col4 = (
-        st.columns(4)
-    )
+    col1, col2, col3, col4 = st.columns(4)
 
 
     with col1:
-
         st.metric(
             "Population",
             f"{int(selected_data['population']):,}"
@@ -830,9 +759,8 @@ with tab_explorer:
 
 
     with col2:
-
         st.metric(
-            "Population Density",
+            "Density",
             (
                 f"{float(selected_data['population_density_per_km2']):,.0f} / km²"
             )
@@ -840,9 +768,8 @@ with tab_explorer:
 
 
     with col3:
-
         st.metric(
-            "300m Park Access",
+            "Park access",
             (
                 f"{float(selected_data['park_access_300m_percent']):.1f}%"
             )
@@ -850,7 +777,6 @@ with tab_explorer:
 
 
     with col4:
-
         st.metric(
             "Days ≥35°C",
             int(
@@ -861,15 +787,12 @@ with tab_explorer:
         )
 
 
-    col1, col2, col3 = (
-        st.columns(3)
-    )
+    col1, col2, col3 = st.columns(3)
 
 
     with col1:
-
         st.metric(
-            "Average Summer Max",
+            "Avg. summer max",
             (
                 f"{float(selected_data['avg_summer_max_temp']):.2f} °C"
             )
@@ -877,9 +800,8 @@ with tab_explorer:
 
 
     with col2:
-
         st.metric(
-            "Hottest Day",
+            "Hottest day",
             (
                 f"{float(selected_data['hottest_day_temp']):.2f} °C"
             )
@@ -887,9 +809,8 @@ with tab_explorer:
 
 
     with col3:
-
         st.metric(
-            "ClimateWell Score",
+            "ClimateWell score",
             (
                 f"{float(selected_data['climatewell_score']):.2f}"
             )
@@ -900,16 +821,16 @@ with tab_explorer:
 
 
     st.subheader(
-        "Score Components"
+        "What drives the score?"
     )
 
 
     component_df = pd.DataFrame(
         {
             "Indicator": [
-                "Population Density Risk",
-                "Park Access Deficit",
-                "Heat Exposure"
+                "Population density",
+                "Park access deficit",
+                "Heat exposure"
             ],
 
             "Score": [
@@ -942,11 +863,6 @@ with tab_explorer:
     )
 
 
-    st.subheader(
-        "Why this score?"
-    )
-
-
     density = float(
         selected_data[
             "population_density_per_km2"
@@ -968,7 +884,7 @@ with tab_explorer:
     )
 
 
-    climatewell_score = float(
+    score = float(
         selected_data[
             "climatewell_score"
         ]
@@ -977,42 +893,34 @@ with tab_explorer:
 
     st.markdown(
         f"""
-**{selected_neighborhood}** has a ClimateWell Score of
-**{climatewell_score:.2f}**.
+**{selected_neighborhood}** scores **{score:.2f}** in the
+current pilot comparison.
 
-Its current indicators include:
+- Population density: **{density:,.0f} people/km²**
+- Area within 300 m of a mapped park: **{park_access:.1f}%**
+- Summer days ≥35°C: **{hot_days}**
 
-- **{density:,.0f} people/km²** population density
-- **{park_access:.1f}%** of the neighborhood area within
-  300 meters of a mapped park
-- **{hot_days} days ≥35°C** during the analyzed summer period
-
-The prototype score combines:
-
-**40% Park Access Deficit  
-+ 30% Population Density Risk  
-+ 30% Heat Exposure**
+The score combines **40% park access deficit,
+30% population-density risk and 30% heat exposure**.
 """
     )
 
 
 # ============================================================
-# TAB 3 — DATA & METHODOLOGY
+# METHODOLOGY
 # ============================================================
 
-with tab_data:
+with tab_methodology:
 
-    st.header(
-        "Pilot Dataset"
+    st.subheader(
+        "Pilot dataset"
     )
 
 
     display_df = (
         metrics_df
         .drop(
-            columns=[
-                "id"
-            ]
+            columns=["id"]
         )
         .rename(
             columns={
@@ -1078,11 +986,9 @@ with tab_data:
 
 
     st.download_button(
-        label="⬇ Download Pilot Dataset",
+        label="Download CSV",
         data=csv_data,
-        file_name=(
-            "climatewell_pilot_metrics.csv"
-        ),
+        file_name="climatewell_pilot_metrics.csv",
         mime="text/csv"
     )
 
@@ -1090,63 +996,26 @@ with tab_data:
     st.divider()
 
 
-    st.header(
-        "Methodology"
+    st.subheader(
+        "Scoring"
     )
 
 
     st.markdown(
         """
-### ClimateWell v0.1
+ClimateWell v0.1 combines three prototype indicators:
 
-ClimateWell combines three prototype indicators.
+- **40% Park Access Deficit**
+- **30% Population Density Risk**
+- **30% Heat Exposure**
 
-#### 🌳 Park Access Deficit — 40%
+`ClimateWell Score = 0.40 × Park Access Deficit + 0.30 × Population Density Risk + 0.30 × Heat Exposure`
 
-Mapped park polygons are obtained from OpenStreetMap.
+Park access represents the share of neighborhood area
+within **300 meters of a mapped OpenStreetMap park**.
 
-PostGIS calculates how much of a neighborhood lies within
-**300 meters of a mapped park**.
-
-A lower park-access percentage produces a higher
-park-access-deficit score.
-
----
-
-#### 👥 Population Density Risk — 30%
-
-Population density is calculated as:
-
-`Population / Neighborhood Area (km²)`
-
-Values are normalized comparatively across the
-current eight-neighborhood pilot dataset.
-
----
-
-#### 🌡️ Heat Exposure — 30%
-
-Historical daily maximum temperatures are obtained from
-the Open-Meteo Historical Weather API.
-
-Heat exposure is calculated as:
-
-`Days ≥35°C / Total Summer Days × 100`
-
-The 35°C threshold is a prototype analytical threshold
-and should not be interpreted as a universal health threshold.
-
----
-
-### Final Formula
-
-`ClimateWell Score =`
-
-`0.40 × Park Access Deficit`
-
-`+ 0.30 × Population Density Risk`
-
-`+ 0.30 × Heat Exposure`
+Heat exposure represents the share of analyzed summer days
+where maximum temperature reached **35°C or higher**.
 """
     )
 
@@ -1154,18 +1023,18 @@ and should not be interpreted as a universal health threshold.
     st.divider()
 
 
-    st.header(
-        "Data Sources"
+    st.subheader(
+        "Data sources"
     )
 
 
     st.markdown(
         """
-- **Neighborhood boundaries:** Ankara Metropolitan Municipality
-- **Mapped parks:** OpenStreetMap
-- **Population:** 2025 neighborhood population data
-- **Historical temperature:** Open-Meteo Historical Weather API
-- **Spatial analysis:** PostgreSQL + PostGIS
+- Ankara Metropolitan Municipality — neighborhood boundaries
+- OpenStreetMap — mapped park polygons
+- 2025 neighborhood population data
+- Open-Meteo — historical temperature estimates
+- PostgreSQL + PostGIS — spatial analysis
 """
     )
 
@@ -1173,29 +1042,21 @@ and should not be interpreted as a universal health threshold.
     st.divider()
 
 
-    st.header(
+    st.subheader(
         "Limitations"
     )
 
 
     st.markdown(
         """
-ClimateWell v0.1 is an exploratory prototype.
+ClimateWell is an exploratory prototype.
 
-Current limitations include:
-
-- only eight neighborhoods are included,
-- OpenStreetMap park completeness may vary,
-- only mapped parks are currently included,
-- other green-space categories are not fully covered,
-- 300-meter accessibility is geometric rather than pedestrian-network accessibility,
-- temperature values are grid-based historical estimates,
-- neighborhood-level physical temperature sensors are not used,
-- population-density normalization depends on the pilot dataset,
-- indicator weights are prototype design choices,
-- the ClimateWell Score has not been scientifically, medically or municipally validated.
-
-Results should therefore be interpreted as
-**comparative exploratory indicators**.
+- The pilot currently covers eight neighborhoods.
+- Park data completeness depends on OpenStreetMap.
+- The 300 m metric represents geometric proximity, not walking routes.
+- Temperature values are grid-based historical estimates.
+- Population-density normalization depends on the pilot dataset.
+- Indicator weights are prototype design choices.
+- ClimateWell is not an official health, climate-risk or municipal index.
 """
     )
